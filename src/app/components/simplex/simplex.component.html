@@ -1,0 +1,106 @@
+<div *ngIf="!hideJumbotron" class="animated fadeIn jumbotron">
+    <h1 class="display-4">Simplex Method</h1>
+    <p class="lead">Description Simplex method.</p>
+    <hr class="my-4">
+    <p>Here, you can verify the simplex method functionality</p>
+    <a class="btn btn-primary" href="#" role="button" (click)="hideJumbotron = true">Try it..!</a>
+</div>
+
+
+
+<div *ngIf="hideJumbotron" class="animated fadeIn jumbotron">
+    <h1 class="display-4">Simplex Method</h1>
+    <hr class="my-4">
+   
+    <form [formGroup]="profileForm" (ngSubmit)="executeSimplex()">
+        <div class="row">
+            <label for="objectFunction" class="col-2 col-form-label">Función objetivo</label>
+            <div class="col-10">
+                <input type="text" class="form-control" id="objectFunction" formControlName="objectFunction">
+            </div>
+        </div> 
+
+        <div class="row m-4">
+            <div class="col-12 text-center">
+                <ng-katex [equation]="profileForm.get('objectFunction').value"></ng-katex> 
+            </div>
+        </div>
+
+        <div class="form-group row">
+                <label class="col-2 col-form-label">Restricciones</label>
+
+                <div class="col-8" formArrayName = "restrictions">
+                    <div  *ngFor="let restriction of profileForm.controls['restrictions'].controls, let i = index">
+                            <input  type="text"
+                                    class="form-control m-1"
+                                    [formControlName]= "i">
+
+                            <div class="text-center">
+                                    <ng-katex [equation]="restriction.value"></ng-katex> 
+                            </div> 
+                    </div>  
+                </div>
+
+                <div class="col-2">
+                        <button type="button"
+                                class="btn btn-primary"
+                                (click)="addRestriction()">Agregar Restricción</button>
+                </div>
+        </div>
+
+        <div class="row">
+                <label for="option" class="col-2 col-form-label">Función objetivo</label>
+                <div class="col-10">
+                    <select class="form-control" formControlName="option">
+                            <option *ngFor="let option of options">{{option}}
+                    </select>
+                </div>
+        </div> 
+
+  
+        <div class="row mt-2">
+                <div class="col-12">
+                        <button type="submit"
+                                class="btn btn-primary btn-block">Ejecutar</button>
+                </div> 
+        </div>
+    </form>
+
+    <!-- Restrictions Panel -->
+    <div class="m-5">
+        <h2>Restricciones</h2>
+        <div *ngFor="let restriction of restrictionsFunctions" class="row">
+            <ng-katex [equation]="restriction"></ng-katex> 
+        </div>
+    </div>
+
+    <!-- Table Simplex Method -->
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th *ngFor="let index of headerTable">
+                        <ng-katex [equation]="index"></ng-katex> 
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let restrictionValue of restrictionsValues">
+                <td scope="row" *ngFor="let value of restrictionValue">
+                    <ng-katex [equation]="value.toString()"></ng-katex> 
+                </td>
+            </tr>
+            <tr>
+                <td scope="row" *ngFor="let value of objectFunctionValue">
+                    <ng-katex [equation]="value.toString()"></ng-katex> 
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+
+</div>
+
+
+
+
