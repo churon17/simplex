@@ -19,6 +19,12 @@ export class SimplexComponent implements OnInit {
     restrictionsValues : any[][] = [];
     objectFunction : string = '';
     objectFunctionValue : any ;
+    pivoteColumn : number = 0;
+    pivoteRow : number = 0;
+    currentPivote : number = 0;
+
+    allResults : number[][] = [];
+    allPresentResults : string[][] = [];
 
     profileForm = new FormGroup({
         objectFunction: new FormControl('z =  2x_1 +4x_2 - 4x_3 +7x_4 '),
@@ -43,29 +49,222 @@ export class SimplexComponent implements OnInit {
 
     executeSimplex(){
 
-      
-        this.restrictionsFunctions = this.getRestrictionsWithAditionalVariables();
+        this.objectFunction = this.profileForm.get('objectFunction').value;
 
-        console.log(this.restrictionsFunctions);
+        let option : boolean = this.profileForm.controls['option'].value.toUpperCase() === 'MAXIMIZAR' ? true : false;
+
+        this.restrictionsFunctions = this.getRestrictionsWithAditionalVariables();
 
         this.fillHeaderTable(this.finallyLargestIndex);
 
         this.getRestrictionsValues(this.restrictionsFunctions);
-
+        
         this.objectFunctionValue = this.getObjectFunctionValue();
-  
+        
+        if(option){
+            this.maximizeObjectFunction();
+        }
+
+        this.equalToZeroObjectFunction();
+
+        this.currentPivote = this.getPivote(this.restrictionsValues);
+
+        console.log(this.currentPivote);
+
+        let valuesIterations = [...this.restrictionsValues]
+
+        let mainFunction = this.objectFunctionValue;
+
+        while(!this.isValid(mainFunction)){
+
+            this.getAnotherIteration(valuesIterations);
+
+            return;
+
+        }   
+
+
+    }
+
+    getAnotherIteration(valuesIteration){
+
+        let newValuesIteration : number[][][] = [];
+        
+        let currentRow = [];
+
+        let currentShowRow = [];
+        
+        for (let init = 0; init < valuesIteration[this.pivoteRow].length; init++) {
+            
+            if(init === 0){
+
+                currentRow.push(this.headerTable[this.pivoteColumn]);
+                currentShowRow.push(this.headerTable[this.pivoteColumn]);
+
+            }else{
+                
+                let value = valuesIteration[this.pivoteRow][init] / this.currentPivote;
+
+                currentRow.push(value);
+                
+                if(Number.isInteger(value)){
+                
+                    currentShowRow.push(value);
+                
+                }else{
+
+                    currentShowRow.push( `${valuesIteration[this.pivoteRow][init]}/${this.currentPivote}`);
+                }
+
+            }
+
+        }
+
+        console.log(currentShowRow);
+
     }
 
 
+    isValid(mainFunction) : boolean{
+
+        for (let init = 0; init < mainFunction.length; init++) {
+            
+              if(mainFunction[init] < 0){
+                  return false;
+              }  
+        }
+
+        return true;        
+
+    }
+
+    getPivote(restrictionsValues){
+
+        this.pivoteColumn = this.getLessIndexOnObjectFunction();
+
+        let pivoteRow = 0;
+
+        let candidateValues = [];
+
+        let candidateRows = [];
+
+        let tamanio = restrictionsValues[0].length - 1;
+
+        for (let init = 0; init < restrictionsValues.length; init++) {
+            
+            let dividend = restrictionsValues[init][tamanio];
+            
+            let divisor =  restrictionsValues[init][this.pivoteColumn];
+
+            if(divisor > 0){
+
+                let result = dividend/divisor;
+                
+                candidateValues.push(result);
+
+                candidateRows.push(init);
+            }
+        }
+
+        this.pivoteRow = this.getRowColumn(candidateValues, candidateRows, restrictionsValues);
+        
+        return restrictionsValues[this.pivoteRow][this.pivoteColumn];
+        
+    }
+
+    getRowColumn(candidateValues : number[], candidateIndexes  : number[], restrictionValues){
+
+        let lessValue = candidateValues[0];
+        let lessIndex = 0;
+
+        if(candidateValues.length < 2){
+            return candidateIndexes[lessIndex];
+        }
+
+        for (let init = 1; init < candidateValues.length; init++) {
+            
+            let currentValue = candidateValues[init];
+
+            if(currentValue < lessValue){
+
+                lessValue = currentValue;
+
+                lessIndex = init;
+
+            }else if(currentValue === lessValue){
+
+                let lessIndexValue = restrictionValues[candidateIndexes[lessIndex]][this.pivoteColumn];
+
+                let currentIndexValue = restrictionValues[candidateIndexes[init]][this.pivoteColumn];
+
+                if(currentIndexValue < lessIndexValue){
+
+                    lessValue = candidateValues[init];
+
+                    lessIndex = init;
+                
+                }else{
+
+                    lessValue = candidateValues[lessIndex];
+                }
+            }
+        }
+
+        return candidateIndexes[lessIndex];
+    }
+
+    getLessIndexOnObjectFunction(){
+
+        let lessValue = parseInt(this.objectFunctionValue[1]);
+
+        let indexValue = 0;
+        
+        for (let init = 2; init < this.objectFunctionValue.length; init++) {
+
+            let currentValue = parseInt(this.objectFunctionValue[init]);
+          
+            if( lessValue > currentValue ){
+
+                lessValue = currentValue;
+
+                indexValue = init;
+            }
+        }
+
+        return indexValue;
+    }
+
+    maximizeObjectFunction(){
+
+        for (let init = 0; init < this.objectFunctionValue.length; init++) {
+
+            let currentValue = parseInt(this.objectFunctionValue[init]);
+
+            if( !Number.isNaN(currentValue) && currentValue !== 0 ){
+
+                this.objectFunctionValue[init] = currentValue * -1;
+
+            }
+            
+        }
+
+    }
+    
+
+    equalToZeroObjectFunction(){
+        
+        this.objectFunctionValue.push(0);
+    
+    }
+
     getObjectFunctionValue() : any[]{
         
-        this.objectFunction = this.profileForm.get('objectFunction').value;
-
         let objectFunctionValue : any = this.getRestrictionValue(this.objectFunction);
 
         objectFunctionValue.unshift('z');
 
         return objectFunctionValue;
+    
     }
 
     getRestrictionsValues( restrictions : string[]){
@@ -131,8 +330,6 @@ export class SimplexComponent implements OnInit {
     }
 
     pullNumbersFromRestriction( stringValuesRestriction : string[]) : number[]{
-
-        console.log(stringValuesRestriction);
 
         let restrictionValues : number[] = []; 
 
