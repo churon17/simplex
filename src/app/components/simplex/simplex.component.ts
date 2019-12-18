@@ -23,8 +23,8 @@ export class SimplexComponent implements OnInit {
     pivoteRow : number = 0;
     currentPivote : number = 0;
 
-    allResults : number[][] = [];
-    allPresentResults : string[][] = [];
+    allResults : number[][][] = [];
+    allPresentResults : string[][][] = [];
 
     profileForm = new FormGroup({
         objectFunction: new FormControl('z =  2x_1 +4x_2 - 4x_3 +7x_4 '),
@@ -67,33 +67,49 @@ export class SimplexComponent implements OnInit {
 
         this.equalToZeroObjectFunction();
 
-        this.currentPivote = this.getPivote(this.restrictionsValues);
-
-        console.log(this.currentPivote);
-
         let valuesIterations = [...this.restrictionsValues]
-
+        
         let mainFunction = this.objectFunctionValue;
+        
+        let iteration = 0;
 
         while(!this.isValid(mainFunction)){
 
-            this.getAnotherIteration(valuesIterations);
+            this.currentPivote = this.getPivote(valuesIterations, mainFunction);
 
-            return;
+            let resultIteration =  this.getAnotherIteration(valuesIterations, mainFunction);
 
+            this.allResults[iteration] =  resultIteration.newValuesIteration;
+            this.allPresentResults[iteration] = resultIteration.newShowValuesIteration;
+            
+            mainFunction = [...resultIteration.newValuesIteration[resultIteration.newValuesIteration.length - 1]];
+
+            for (let index = 0; index < resultIteration.newValuesIteration.length -1; index++) {
+                
+                valuesIterations[index] = resultIteration.newValuesIteration[index];
+                
+            }
+            
+            iteration++;
         }   
 
+        console.log(this.allPresentResults);
+
+        return;
 
     }
 
-    getAnotherIteration(valuesIteration){
+    getAnotherIteration(valuesIteration, objectFunction){
 
-        let newValuesIteration : number[][][] = [];
+      
+        let newValuesIteration : number[][] = [];
         
+        let newShowValuesIteration : any[][] = [];
+
         let currentRow = [];
 
         let currentShowRow = [];
-        
+
         for (let init = 0; init < valuesIteration[this.pivoteRow].length; init++) {
             
             if(init === 0){
@@ -113,21 +129,128 @@ export class SimplexComponent implements OnInit {
                 
                 }else{
 
-                    currentShowRow.push( `${valuesIteration[this.pivoteRow][init]}/${this.currentPivote}`);
+                    currentShowRow.push(this.decimalToFraction(Math.round(value * 100)/100).display);
                 }
 
+            }
+        }
+
+        newValuesIteration[this.pivoteRow] = currentRow;
+        newShowValuesIteration[this.pivoteRow] = currentShowRow;
+
+        for (let firstInit = 0; firstInit < valuesIteration.length + 1; firstInit++) {
+            
+            if(this.pivoteRow !== firstInit){
+
+                let newRow : any = [];
+
+                if(firstInit === valuesIteration.length){
+
+                    newRow = this.convertToZeroDifferentPivote(objectFunction, currentRow);
+
+                }else{
+
+                    newRow = this.convertToZeroDifferentPivote(valuesIteration[firstInit], currentRow);
+                
+                }
+
+                newValuesIteration[firstInit] = newRow.currentRow;
+                newShowValuesIteration[firstInit] = newRow.currentShowRow;
+            }
+        }
+
+        return {
+            newValuesIteration,
+            newShowValuesIteration
+        };
+    }
+
+    convertToZeroDifferentPivote(differentRow : any, pivoteRow : any){
+
+        let currentRow = [];
+        let currentShowRow = [];
+
+        let value = differentRow[this.pivoteColumn];
+
+        if(value === 0){
+
+            currentRow = differentRow;
+
+            differentRow.forEach((element, indice) => {
+                
+                if(indice === 0){
+
+                    currentShowRow.push(element);
+
+                }else{  
+                    
+                    if(Number.isInteger(element)){
+
+                        currentShowRow.push(element);
+    
+                    }else{
+
+                        currentShowRow.push(this.decimalToFraction(Math.round(element * 100)/100).display);
+
+                    }
+
+                }
+
+            });
+
+            let valuesReturn = {
+                currentRow,
+                currentShowRow
+    
+            }
+    
+            return valuesReturn;
+        }
+
+        let helperValue =  value * -1;
+
+      
+        for (let init = 0; init < differentRow.length; init++) {
+            
+            if(init === 0){
+
+                currentRow.push(differentRow[init]);
+                currentShowRow.push(differentRow[init]);
+
+            }else{
+                
+                let pivoteValue = (pivoteRow[init] * helperValue);
+
+                let differentValue = differentRow[init]
+
+                let currentValue = pivoteValue + differentValue;
+
+                currentRow.push(currentValue);
+
+                if(Number.isInteger(currentValue)){
+
+                    currentShowRow.push(currentValue);
+
+                }else{
+                    currentShowRow.push(this.decimalToFraction(Math.round(currentValue * 100)/100).display);
+                }
             }
 
         }
 
-        console.log(currentShowRow);
+        let valuesReturn = {
+            currentRow,
+            currentShowRow
 
+        }
+
+        return valuesReturn;
+       
     }
-
 
     isValid(mainFunction) : boolean{
 
-        for (let init = 0; init < mainFunction.length; init++) {
+        for (let init = 1; init < mainFunction.length; init++) {
             
               if(mainFunction[init] < 0){
                   return false;
@@ -138,9 +261,9 @@ export class SimplexComponent implements OnInit {
 
     }
 
-    getPivote(restrictionsValues){
+    getPivote(restrictionsValues, objectFunction){
 
-        this.pivoteColumn = this.getLessIndexOnObjectFunction();
+        this.pivoteColumn = this.getLessIndexOnObjectFunction(objectFunction);
 
         let pivoteRow = 0;
 
@@ -165,9 +288,8 @@ export class SimplexComponent implements OnInit {
                 candidateRows.push(init);
             }
         }
-
         this.pivoteRow = this.getRowColumn(candidateValues, candidateRows, restrictionsValues);
-        
+
         return restrictionsValues[this.pivoteRow][this.pivoteColumn];
         
     }
@@ -178,6 +300,7 @@ export class SimplexComponent implements OnInit {
         let lessIndex = 0;
 
         if(candidateValues.length < 2){
+            
             return candidateIndexes[lessIndex];
         }
 
@@ -213,15 +336,15 @@ export class SimplexComponent implements OnInit {
         return candidateIndexes[lessIndex];
     }
 
-    getLessIndexOnObjectFunction(){
+    getLessIndexOnObjectFunction(objectFunction){
 
-        let lessValue = parseInt(this.objectFunctionValue[1]);
+        let lessValue = parseInt(objectFunction[1]);
 
-        let indexValue = 0;
+        let indexValue = 1;
         
-        for (let init = 2; init < this.objectFunctionValue.length; init++) {
+        for (let init = 2; init < objectFunction.length; init++) {
 
-            let currentValue = parseInt(this.objectFunctionValue[init]);
+            let currentValue = parseInt(objectFunction[init]);
           
             if( lessValue > currentValue ){
 
@@ -501,4 +624,35 @@ export class SimplexComponent implements OnInit {
         return valuesObjectFunction;
 
     }
+
+    gcd(a, b) {
+        return (b) ? this.gcd(b, a % b) : a;
+    }
+
+    decimalToFraction(_decimal) {
+        if (_decimal == parseInt(_decimal)) {
+            return {
+                top: parseInt(_decimal),
+                bottom: 1,
+                display: parseInt(_decimal) + '/' + 1
+            };
+        }
+        else {
+            var top = _decimal.toString().includes(".") ? _decimal.toString().replace(/\d+[.]/, '') : 0;
+            var bottom = Math.pow(10, top.toString().replace('-','').length);
+            if (_decimal >= 1) {
+                top = +top + (Math.floor(_decimal) * bottom);
+            }
+            else if (_decimal <= -1) {
+                top = +top + (Math.ceil(_decimal) * bottom);
+            }
+    
+            var x = Math.abs(this.gcd(top, bottom));
+            return {
+                top: (top / x),
+                bottom: (bottom / x),
+                display: (top / x) + '/' + (bottom / x)
+            };
+        }
+    };
 }

@@ -98,6 +98,23 @@
         </tbody>
     </table>
 
+    
+    <div *ngFor="let results of allPresentResults, let i = index">
+        <hr>
+        <h3>Iteracion {{i + 1}}</h3>
+        <table class="table" >
+            <tbody>
+                <tr *ngFor="let row of results">
+                    <td scope="row" *ngFor="let value of row">
+                        <ng-katex [equation]="value.toString()"></ng-katex> 
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+    
+
 
 </div>
 
