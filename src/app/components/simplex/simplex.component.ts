@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormGroup, FormControl, FormArray } from '@angular/forms';
+import { isObject } from 'util';
 
 @Component({
     selector: 'app-simplex',
@@ -22,6 +23,8 @@ export class SimplexComponent implements OnInit {
     pivoteColumn : number = 0;
     pivoteRow : number = 0;
     currentPivote : number = 0;
+    objectFunctionHelper = [];
+
 
     allResults : number[][][] = [];
     allPresentResults : string[][][] = [];
@@ -31,10 +34,20 @@ export class SimplexComponent implements OnInit {
         restrictions : new FormArray([
             new FormControl('r1 = 8x_1 - 2x_2 + x_3 - x_4 \\leq 50'),
             new FormControl('r2 = 3x_1 + 5x_2 + 2x_4 \\leq 150'),
-            new FormControl('r3 = x_1 - 2x_2 + 2x_3 - 4x_4 \\leq 100 '),
+            new FormControl('r3 = x_1 - x_2 + 2x_3 - 4x_4 \\leq 100 '),
         ]),
         option : new FormControl('Maximizar')
     });
+
+    // profileForm = new FormGroup({
+    //     objectFunction: new FormControl('z =  -2x_1 + 3x_2'),
+    //     restrictions : new FormArray([
+    //         new FormControl('r1 = 2x_1 - x_2 \\leq 10'),
+    //         new FormControl('r2 = -x_1 - 5x_2  \\leq 20'),
+    //         new FormControl('r3 = 6x_1 - 12x_2 \\leq 18  '),
+    //     ]),
+    //     option : new FormControl('Maximizar')
+    // });
 
     restrictionsFormArray : FormArray = <FormArray>this.profileForm.controls['restrictions'];
 
@@ -93,14 +106,11 @@ export class SimplexComponent implements OnInit {
             iteration++;
         }   
 
-        console.log(this.allPresentResults);
-
         return;
 
     }
 
     getAnotherIteration(valuesIteration, objectFunction){
-
       
         let newValuesIteration : number[][] = [];
         
@@ -265,8 +275,6 @@ export class SimplexComponent implements OnInit {
 
         this.pivoteColumn = this.getLessIndexOnObjectFunction(objectFunction);
 
-        let pivoteRow = 0;
-
         let candidateValues = [];
 
         let candidateRows = [];
@@ -376,13 +384,26 @@ export class SimplexComponent implements OnInit {
 
     equalToZeroObjectFunction(){
         
-        this.objectFunctionValue.push(0);
-    
+        let defaultNumber : number = 0;
+
+        this.objectFunctionHelper.forEach((element : string) =>{
+
+            if(!element.includes('x')){
+                defaultNumber = parseInt(element);
+            }
+
+        });
+
+        if(defaultNumber === 0){
+
+            this.objectFunctionValue.push(defaultNumber);
+
+        }
     }
 
     getObjectFunctionValue() : any[]{
         
-        let objectFunctionValue : any = this.getRestrictionValue(this.objectFunction);
+        let objectFunctionValue : any = this.getRestrictionValue(this.objectFunction, true);
 
         objectFunctionValue.unshift('z');
 
@@ -390,7 +411,7 @@ export class SimplexComponent implements OnInit {
     
     }
 
-    getRestrictionsValues( restrictions : string[]){
+    getRestrictionsValues( restrictions : string[], isFunctionObject ? : boolean){
 
         restrictions.forEach((restriction, index) => {
 
@@ -404,10 +425,21 @@ export class SimplexComponent implements OnInit {
 
     }
 
-    getRestrictionValue(restriction : string) : number[]{
+    getRestrictionValue(restriction : string, isFunctionObject ? : boolean) : number[]{
+        // let option = '';
 
+        // if(restriction.includes('\\leq')){
+
+        //     option = '\\leq';
+
+        // }else if(restriction.includes('\\geq')){
+
+        //     option = '\\geq';
+        // }
+
+        
         let splitRestriction =restriction.split('\\leq').join('+').replace(/\s+/g, '');
-
+    
         let onlyValuesWithIndexes : string[] = [];
 
         let stringValuesRestriction : string[] = [];
@@ -448,6 +480,16 @@ export class SimplexComponent implements OnInit {
             
         }
 
+        stringValuesRestriction = stringValuesRestriction.filter( value => {
+            return value !== ""; 
+        });
+
+        if(isFunctionObject){
+            
+            this.objectFunctionHelper = stringValuesRestriction;
+
+        }
+
         return this.pullNumbersFromRestriction(stringValuesRestriction);
         
     }
@@ -455,8 +497,6 @@ export class SimplexComponent implements OnInit {
     pullNumbersFromRestriction( stringValuesRestriction : string[]) : number[]{
 
         let restrictionValues : number[] = []; 
-
-        let finallyRestrictionValues : number[] = [];
 
         stringValuesRestriction.forEach(stringValueRestriction =>{
 
@@ -499,12 +539,11 @@ export class SimplexComponent implements OnInit {
             }else{
 
                 let restrictionValue : number = parseInt(stringValueRestriction);
-              
+
                 restrictionValues[this.finallyLargestIndex] = restrictionValue;
 
             }
         });
-
         return restrictionValues;
     }
 
@@ -594,8 +633,14 @@ export class SimplexComponent implements OnInit {
     getLargestIndexOnObjectFunction() : number {
 
         let valuesObjectFunction = this.getIndexesOnObjectFunction();
-        
-        let largestIndex = parseInt(valuesObjectFunction[0].slice(-1));
+
+        let largestIndex = 0;
+
+        if(valuesObjectFunction[0].length > 2){
+            largestIndex = parseInt(valuesObjectFunction[0].slice(-1));
+        }else{
+            largestIndex = parseInt(valuesObjectFunction[1].slice(-1));
+        }
         
         for (let init = 1; init < valuesObjectFunction.length; init++) {
             
