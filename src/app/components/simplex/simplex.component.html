@@ -69,7 +69,7 @@
     <!-- Restrictions Panel -->
     <div class="m-5">
         <h2>Restricciones</h2>
-        <div *ngFor="let restriction of restrictionsFunctions" class="row">
+        <div *ngFor="let restriction of restrictionsPresent" class="row">
             <ng-katex [equation]="restriction"></ng-katex> 
         </div>
     </div>
@@ -113,6 +113,10 @@
         </table>
 
     </div>
+
+    <button (click)='defaultOptions()' class="btn-block btn btn-info">
+        Reestablecer
+    </button>
     
 
 

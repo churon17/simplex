@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormGroup, FormControl, FormArray } from '@angular/forms';
 import { isObject } from 'util';
+import { element } from 'protractor';
 
 @Component({
     selector: 'app-simplex',
@@ -11,9 +12,10 @@ export class SimplexComponent implements OnInit {
 
     
     equation: string = 'x^2';
-    hideJumbotron : boolean = true;
+    hideJumbotron : boolean = false;
     options : string[]=  ['Maximizar', 'Minimizar'] ;
     restrictionsFunctions : string[] = [];
+    restrictionsPresent : string[] = [];
     aditionalVariables : string[] = [];
     finallyLargestIndex : number = 0; 
     headerTable : string[] = [];
@@ -40,11 +42,21 @@ export class SimplexComponent implements OnInit {
     });
 
     // profileForm = new FormGroup({
-    //     objectFunction: new FormControl('z =  -2x_1 + 3x_2'),
+    //     objectFunction: new FormControl('z =  -2x_1 + 3x_2 + 60'),
     //     restrictions : new FormArray([
     //         new FormControl('r1 = 2x_1 - x_2 \\leq 10'),
     //         new FormControl('r2 = -x_1 - 5x_2  \\leq 20'),
     //         new FormControl('r3 = 6x_1 - 12x_2 \\leq 18  '),
+    //     ]),
+    //     option : new FormControl('Maximizar')
+    // });
+
+    // profileForm = new FormGroup({
+    //     objectFunction: new FormControl('z =  2x_1 +3x_2 + 3x_3 '),
+    //     restrictions : new FormArray([
+    //         new FormControl('r1 = 3x_1 + 2x_2  \\leq 60'),
+    //         new FormControl('r2 = -x_1 + x_2 + 4x_3 \\leq 10'),
+    //         new FormControl('r3 = 2x_1 - 2x_2 + 5x_3  \\leq 50 '),
     //     ]),
     //     option : new FormControl('Maximizar')
     // });
@@ -60,13 +72,57 @@ export class SimplexComponent implements OnInit {
         this.restrictionsFormArray.push(new FormControl(`r${this.restrictionsFormArray.length + 1} = `));
     }
 
+    showRestrictions(){
+
+        for (let index = 0; index < this.restrictionsFunctions.length; index++) {
+            
+            if(this.restrictionsFunctions[index].includes('\\leq')){
+             
+                this.restrictionsPresent[index] = this.restrictionsFunctions[index].replace('\\leq', '=');
+
+            }else if(this.restrictionsFunctions[index].includes('\\geq')){
+    
+                this.restrictionsPresent[index] = this.restrictionsFunctions[index].replace('\\geq','=');              
+    
+            }
+            
+        }
+
+
+    }
+
+    defaultOptions(){
+        this.equation = 'x^2';
+        this.options =  ['Maximizar', 'Minimizar'] ;
+        this.restrictionsFunctions  = [];
+        this.restrictionsPresent  = [];
+        this.aditionalVariables = [];
+        this.finallyLargestIndex  = 0; 
+        this.headerTable = [];
+        this.restrictionsValues = [];
+        this.objectFunction  = '';
+        this.objectFunctionValue = [] ;
+        this.pivoteColumn  = 0;
+        this.pivoteRow  = 0;
+        this.currentPivote = 0;
+        this.objectFunctionHelper = [];
+    
+    
+        this.allResults  = [];
+        this.allPresentResults  = [];
+
+    }
+
     executeSimplex(){
 
+        
         this.objectFunction = this.profileForm.get('objectFunction').value;
-
+        
         let option : boolean = this.profileForm.controls['option'].value.toUpperCase() === 'MAXIMIZAR' ? true : false;
-
+        
         this.restrictionsFunctions = this.getRestrictionsWithAditionalVariables();
+        
+        this.showRestrictions();
 
         this.fillHeaderTable(this.finallyLargestIndex);
 
@@ -296,6 +352,7 @@ export class SimplexComponent implements OnInit {
                 candidateRows.push(init);
             }
         }
+
         this.pivoteRow = this.getRowColumn(candidateValues, candidateRows, restrictionsValues);
 
         return restrictionsValues[this.pivoteRow][this.pivoteColumn];
@@ -426,19 +483,28 @@ export class SimplexComponent implements OnInit {
     }
 
     getRestrictionValue(restriction : string, isFunctionObject ? : boolean) : number[]{
-        // let option = '';
+        
+        let splitRestriction = '';
 
-        // if(restriction.includes('\\leq')){
+        console.log(restriction);
 
-        //     option = '\\leq';
-
-        // }else if(restriction.includes('\\geq')){
-
-        //     option = '\\geq';
-        // }
+        if(restriction.includes('\\leq')){
 
         
-        let splitRestriction =restriction.split('\\leq').join('+').replace(/\s+/g, '');
+            splitRestriction =restriction.split('\\leq').join('+').replace(/\s+/g, '');
+
+        }else if(restriction.includes('\\geq')){
+
+            splitRestriction =restriction.split('\\geq').join('+').replace(/\s+/g, '');
+
+        }else{
+            
+            splitRestriction =restriction.split('\\geq').join('+').replace(/\s+/g, '');
+
+        }
+
+       
+        console.log(splitRestriction);
     
         let onlyValuesWithIndexes : string[] = [];
 
@@ -588,7 +654,7 @@ export class SimplexComponent implements OnInit {
 
             let splitRestriction : string[] = restriction.split('\\geq');
             
-            splitRestriction[0] = `${splitRestriction[0]} + ${this.aditionalVariables[indexRestriction]}`;
+            splitRestriction[0] = `${splitRestriction[0]} - ${this.aditionalVariables[indexRestriction]}`;
 
             finalRestriction = splitRestriction.join(' \\geq ');
 
